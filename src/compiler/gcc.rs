@@ -547,6 +547,7 @@ where
     };
     if split_dwarf {
         let dwo = output.with_extension("dwo");
+        common_args.push(OsString::from("-D_gsplit_dwarf_path=".to_owned() + dwo.to_str().unwrap() + " "));
         // -gsplit-dwarf doesn't guarantee .dwo file if no -g is specified
         outputs.insert(
             "dwo",
