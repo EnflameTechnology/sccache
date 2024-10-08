@@ -663,6 +663,8 @@ pub fn parse_arguments(
                 | Some(PassThroughFlag)
                 | Some(PassThrough(_))
                 | Some(PassThroughPath(_))
+                | Some(TopsDeviceLibPath(_))
+                | Some(TopsDeviceLib(_))
                 | Some(PedanticFlag)
                 | Some(Standard(_)) => &mut common_args,
                 Some(Unhashed(_)) => &mut unhashed_args,

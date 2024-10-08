@@ -119,6 +119,8 @@ fn get_clap_command() -> clap::Command {
             "\n",
             "    Azure:     ",
             cfg!(feature = "azure"),
+            "\n",
+            "    TOPSCC:    true",
             "\n"
         ))
         .args(&[
