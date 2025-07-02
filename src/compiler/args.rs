@@ -462,6 +462,7 @@ impl<T: ArgumentValue> ArgInfo<T> {
     /// Returns whether the given string matches the argument description, and if not,
     /// how it differs.
     fn cmp(&self, arg: &str) -> Ordering {
+        debug!("cmp: {:?}, {:?}", self, arg);
         match self {
             &ArgInfo::TakeArg(s, _, ArgDisposition::CanBeSeparated(None))
             | &ArgInfo::TakeArg(s, _, ArgDisposition::Concatenated(None))
@@ -470,10 +471,10 @@ impl<T: ArgumentValue> ArgInfo<T> {
                 Ordering::Equal
             }
             &ArgInfo::TakeArg(s, _, ArgDisposition::CanBeSeparated(Some(d)))
-            | &ArgInfo::TakeArg(s, _, ArgDisposition::Concatenated(Some(d)))
-                if arg.len() > s.len() && arg.starts_with(s) =>
-            {
-                arg.as_bytes()[s.len()].cmp(&d)
+            | &ArgInfo::TakeArg(s, _, ArgDisposition::Concatenated(Some(d))) => {
+                let delimiter_char = d as char;
+                let first_part = arg.split(delimiter_char).next().unwrap_or("");
+                s.cmp(first_part)
             }
             _ => self.flag_str().cmp(arg),
         }

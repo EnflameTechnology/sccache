@@ -289,6 +289,7 @@ where
     let mut seen_arch = None;
     let dont_cache_multiarch = env::var("SCCACHE_CACHE_MULTIARCH").is_err();
     let mut tops_device_lib_path = PathBuf::new();
+    let mut pending_tops_device_lib: Option<OsString> = None;
 
     // Custom iterator to expand `@` arguments which stand for reading a file
     // and interpreting it as a list of more arguments.
@@ -335,11 +336,30 @@ where
                 compilation_flag =
                     OsString::from(arg.flag_str().expect("Compilation flag expected"));
             }
-            Some(TopsDeviceLibPath(_tops_device_lib_path)) => tops_device_lib_path = _tops_device_lib_path.to_path_buf(),
-            Some(TopsDeviceLib(tops_device_lib_)) => {
-                if ! tops_device_lib_path.as_os_str().is_empty() {
+            Some(TopsDeviceLibPath(_tops_device_lib_path)) => {
+                tops_device_lib_path = if _tops_device_lib_path.is_absolute() {
+                    _tops_device_lib_path.to_path_buf()
+                } else {
+                    cwd.join(_tops_device_lib_path)
+                };
+                // 如果有待处理的TopsDeviceLib，立即处理
+                if let Some(tops_device_lib_) = pending_tops_device_lib.take() {
                     let tops_device_lib = tops_device_lib_path.join(tops_device_lib_);
-                    extra_hash_files.push(tops_device_lib.clone());
+                    debug!("tops_device_lib: {:?}", tops_device_lib);
+                    extra_hash_files.push(tops_device_lib);
+                }
+            }
+            Some(TopsDeviceLib(tops_device_lib_)) => {
+                debug!("tops_device_lib_path: {:?}", tops_device_lib_path);
+                if ! tops_device_lib_path.as_os_str().is_empty() {
+                    // 路径已设置，立即处理
+                    let tops_device_lib = tops_device_lib_path.join(tops_device_lib_);
+                    debug!("tops_device_lib: {:?}", tops_device_lib);
+                    extra_hash_files.push(tops_device_lib);
+                } else {
+                    // 路径未设置，存储待处理
+                    debug!("Storing pending tops_device_lib: {:?}", tops_device_lib_);
+                    pending_tops_device_lib = Some(tops_device_lib_.clone());
                 }
             }
             Some(ProfileGenerate) => profile_generate = true,
@@ -631,6 +651,11 @@ where
             optional: false,
         },
     );
+
+    // 检查是否有未处理的TopsDeviceLib
+    if let Some(tops_device_lib_) = pending_tops_device_lib {
+        warn!("TopsDeviceLib {:?} was specified but TopsDeviceLibPath was not found", tops_device_lib_);
+    }
 
     CompilerArguments::Ok(ParsedArguments {
         input: input.into(),
